@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Api Test</title>
+</head>
+
+<body>
+    <div id="app">
+        <div>
+            <input type="date" v-model="start" placeholder="start date" />
+            <input type="date" v-model="end" placeholder="end date" />
+            <button @click="getWorkDays">Get Workdays</button>
+        </div>
+        <div>
+            <ul>
+                <li v-for="workday in workdays" :key="workday">{{ workday }}</li>
+            </ul>
+            <div v-if="apiError">
+                <p>Error: {{ apiError.code }} - {{ apiError.message }}</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3"></script>
+    <script>
+        const start = new Date();
+        const end = new Date();
+        end.setDate(new Date().getDate() + 7);
+        const app = Vue.createApp({
+            data() {
+                return {
+                    start: start.toISOString().split('T')[0],
+                    end: end.toISOString().split('T')[0],
+                    workdays: [],
+                    apiError: null
+                }
+            },
+            methods: {
+                async getWorkDays() {
+                    this.apiError = null;
+                    try {
+                        const response = await fetch('workdays', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ start: this.start, end: this.end })
+                        });
+
+                        if (!response.headers.get('content-type')?.includes('application/json')) {
+                            throw { code: response.status, message: await response.text() }
+                        }
+
+                        const data = await response.json();
+
+                        if (!response.ok) throw data;
+                        this.workdays = data.workDays;
+
+                    } catch (error) {
+                        this.workdays = [];
+                        this.apiError = error.code && error.message ? error : 
+                            { code: '?', message: error.toString() };
+                    }
+                }
+            }
+        });
+        app.mount('#app');
+    </script>
+</body>
+
+</html>
